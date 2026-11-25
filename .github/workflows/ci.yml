@@ -23,8 +23,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Run tests
+        id: unit_tests
         run: |
           python -m pytest -v
+
+      - name: Send email on test failure
+        if: failure() && steps.unit_tests.outcome == 'failure' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: FlaskApp CI - Unit tests failed
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: FlaskApp CI Pipeline
+          body: |
+            Unit tests have failed in the FlaskApp CI pipeline.
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+
+            View workflow logs:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
   build:
     runs-on: ubuntu-latest
     steps:
